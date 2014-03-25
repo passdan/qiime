@@ -1587,6 +1587,53 @@ def subsample_fasta(input_fasta_fp,
     input_fasta.close()
     output_fasta.close()
 
+def subsample_fasta_by_sample(input_fasta_fp, output_fp, subsample):
+    """ Writes random percent_sample of sequences from input fasta filepath
+
+    input_fasta_fp: input fasta filepath
+    output_fp: output fasta filepath
+    count_subsample: number of sequences to write
+    """
+
+    input_fasta = open(input_fasta_fp, "U")
+
+    output_fasta = open(output_fp, "w")
+
+    output_log = open("subsample_fasta_by_sample.log", "w")
+
+    sample_dict = {}
+
+    # List of samples from the mapping file
+    with open(sample_list, "rU") as f:
+        for line in f:
+            key = line.rstrip()
+            sample_dict[key] = 0
+
+    del_flag = 0
+
+    for label, seq in MinimalFastaParser(input_fasta):
+        l = label.split('_',1)
+        for sample in sample_dict:
+            if ((sample_dict[sample] < subsample) and (l[0] == sample)):
+                output_fasta.write('>%s\n%s\n' % (label, seq))
+                sample_dict[sample] += 1
+            elif sample_dict[sample] >= subsample:
+                output_log.write(sample + ": " + str(sample_dict[sample]) + "\n")
+                output_log.flush()
+                del_flag = sample
+
+        # remove from sample_dict if finished with to speed up loop
+        if del_flag != 0:
+            del sample_dict[del_flag]
+            del_flag = 0
+
+    for sample in sample_dict:
+        output_log.write(sample + ": " + str(sample_dict[sample]) + "\n")
+
+    input_fasta.close()
+    output_fasta.close()
+    output_log.close()
+
 
 def subsample_fastq(input_fastq_fp,
                     output_fp,
